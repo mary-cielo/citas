@@ -1,0 +1,13 @@
+import tkinter as tk  
+ventana = tk.Tk()  
+ventana.title("BIENVENIDO A RUDOLFS")  
+ventana.geometry("400x500")   
+label = tk.Label(ventana, text="Bienvenido")  
+label.pack(pady=20)
+boton_salir = tk.Button(ventana, text="Iniciar Secion", command=ventana.quit)  
+boton_salir.pack(pady=10)  
+boton_salir = tk.Button(ventana, text="Crear cuenta", command=ventana.quit)  
+boton_salir.pack(pady=10) 
+label = tk.Label(ventana, text="ayuda")   
+label.pack(pady=20)
+ventana.mainloop()  
