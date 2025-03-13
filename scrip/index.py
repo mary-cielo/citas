@@ -90,7 +90,7 @@ def abrir_crear_cuenta():
     """Abre la ventana de creación de cuenta."""
     ventana_crear = tk.Toplevel(ventana)
     ventana_crear.title("Crear Cuenta")
-    ventana_crear.geometry("300x400")
+    ventana_crear.geometry("300x600")
     ventana_crear.configure(bg="#e0e0e0")
 
     label_crear = tk.Label(ventana_crear, text="Crear Cuenta")
