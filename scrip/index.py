@@ -1,29 +1,59 @@
 import sys
 import os
 import tkinter as tk
+import db
 
-# Asegurar que Python pueda encontrar la carpeta raíz del proyecto
+ # Asegurar que `db.py` tenga esta función
+
+# Asegurar que Python encuentre la carpeta raíz del proyecto
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-# ---------- FUNCIONES AUXILIARES DE ESTILO ----------
+# ---------- FUNCIONES AUXILIARES ----------
 def aplicar_estilos(widget):
     widget.config(font=("Segoe UI", 12), bg="#e0e0e0", fg="#000000")
 
 def boton_estilizado(boton):
     boton.config(font=("Segoe UI", 12), bg="#4CAF50", fg="#ffffff", padx=10, pady=5)
 
-# ---------- FUNCIONES DE LÓGICA ----------
+# ---------- FUNCIONES DE BASE DE DATOS ----------
+def insertar_usuario(nombre, apellido, celular, dni, correo, contraseña):
+    """Inserta un nuevo usuario en la base de datos."""
+    conn = db.conectar_db() 
+    if conn:
+        cursor = conn.cursor()
+        try:
+            query = '''INSERT INTO usuario (nombre, apellido, celular, dni, correo, contraseña) 
+                       VALUES (%s, %s, %s, %s, %s , %s)'''
+            cursor.execute(query, (nombre, apellido, celular, dni, correo, contraseña))
+            conn.commit()
+            print("✅ Registro exitoso.")
+        except Exception as e:
+            print(f"❌ Error al insertar usuario: {e}")
+            conn.rollback()
+        finally:
+            cursor.close()
+            conn.close()
+
+def crear_cuenta(nombre, apellido, celular, dni, correo, contraseña):
+    """Maneja la creación de una cuenta con validaciones."""
+    if not nombre or not apellido or not celular or not dni or not correo or not contraseña:
+        print("⚠️ Todos los campos son obligatorios.")
+        return
+    if "@" not in correo:
+        print("❌ Correo inválido.")
+        return
+    try:
+        insertar_usuario(nombre, apellido, celular, dni, correo, contraseña)
+        print("✅ Cuenta creada exitosamente.")
+    except Exception as e:
+        print(f"❌ Error al crear cuenta: {e}")
+
+# ---------- FUNCIONES DE INTERFAZ ----------
 def iniciar_sesion(usuario, contrasena):
     """Maneja el inicio de sesión."""
     print(f"Usuario: {usuario}, Contraseña: {contrasena}")
-    # Aquí puedes agregar la lógica para verificar credenciales en una base de datos
+    # Aquí puedes agregar la lógica para verificar credenciales en la base de datos
 
-def crear_cuenta(nombre, apellido, celular, dni, correo):
-    """Maneja la creación de una cuenta."""
-    print(f"Nombre: {nombre}, Apellido: {apellido}, Celular: {celular}, DNI: {dni}, Correo: {correo}")
-    # Aquí puedes agregar la lógica para guardar los datos en una base de datos
-
-# ---------- VENTANAS ----------
 def abrir_inicio_sesion():
     """Abre la ventana de inicio de sesión."""
     ventana_login = tk.Toplevel(ventana)
@@ -31,26 +61,24 @@ def abrir_inicio_sesion():
     ventana_login.geometry("300x350")
     ventana_login.configure(bg="#e0e0e0")
 
-    # Etiqueta de bienvenida
     label_login = tk.Label(ventana_login, text="Iniciar Sesión")
     aplicar_estilos(label_login)
     label_login.pack(pady=15)
 
-    # Campos de usuario y contraseña
-    for texto in ["Usuario:", "Contraseña:"]:
-        label = tk.Label(ventana_login, text=texto)
-        aplicar_estilos(label)
-        label.pack(pady=(10, 0))
+    label_usuario = tk.Label(ventana_login, text="Usuario:")
+    aplicar_estilos(label_usuario)
+    label_usuario.pack(pady=(10, 0))
 
-        entry = tk.Entry(ventana_login, font=("Segoe UI", 12), show="*" if texto == "Contraseña:" else "")
-        entry.pack(pady=5)
-        
-        if texto == "Usuario:":
-            entry_usuario = entry
-        else:
-            entry_contrasena = entry
+    entry_usuario = tk.Entry(ventana_login, font=("Segoe UI", 12))
+    entry_usuario.pack(pady=5)
 
-    # Botón de confirmación
+    label_contrasena = tk.Label(ventana_login, text="Contraseña:")
+    aplicar_estilos(label_contrasena)
+    label_contrasena.pack(pady=(10, 0))
+
+    entry_contrasena = tk.Entry(ventana_login, font=("Segoe UI", 12), show="*")
+    entry_contrasena.pack(pady=5)
+
     boton_confirmar = tk.Button(
         ventana_login, text="Confirmar",
         command=lambda: iniciar_sesion(entry_usuario.get(), entry_contrasena.get())
@@ -65,13 +93,11 @@ def abrir_crear_cuenta():
     ventana_crear.geometry("300x400")
     ventana_crear.configure(bg="#e0e0e0")
 
-    # Etiqueta de bienvenida
     label_crear = tk.Label(ventana_crear, text="Crear Cuenta")
     aplicar_estilos(label_crear)
     label_crear.pack(pady=15)
 
-    # Campos de entrada
-    etiquetas = ["Nombre:", "Apellido:", "Celular:", "DNI:", "Correo:"]
+    etiquetas = ["Nombre:", "Apellido:", "Celular:", "DNI:", "Correo:", "Contraseña:"]
     entradas = {}
 
     for etiqueta in etiquetas:
@@ -83,7 +109,6 @@ def abrir_crear_cuenta():
         entry.pack(pady=5)
         entradas[etiqueta] = entry
 
-    # Botón para confirmar la creación de cuenta
     boton_confirmar = tk.Button(
         ventana_crear, text="Crear Cuenta",
         command=lambda: crear_cuenta(
@@ -91,7 +116,8 @@ def abrir_crear_cuenta():
             entradas["Apellido:"].get(),
             entradas["Celular:"].get(),
             entradas["DNI:"].get(),
-            entradas["Correo:"].get()
+            entradas["Correo:"].get(),
+            entradas["Contraseña:"].get()
         )
     )
     boton_estilizado(boton_confirmar)
@@ -106,12 +132,10 @@ def main():
     ventana.geometry("400x500")
     ventana.configure(bg="#e0e0e0")
 
-    # Etiqueta de bienvenida
     label = tk.Label(ventana, text="Bienvenido")
     aplicar_estilos(label)
     label.pack(pady=20)
 
-    # Botones de inicio de sesión y creación de cuenta
     botones = [
         ("Iniciar Sesión", abrir_inicio_sesion),
         ("Crear Cuenta", abrir_crear_cuenta)
@@ -122,12 +146,10 @@ def main():
         boton_estilizado(boton)
         boton.pack(pady=10)
 
-    # Etiqueta "¿Quiénes somos?"
     label_info = tk.Label(ventana, text="¿Quiénes somos?")
     aplicar_estilos(label_info)
     label_info.pack(pady=20)
 
-    # Iniciar ventana
     ventana.mainloop()
 
 if __name__ == "__main__":
