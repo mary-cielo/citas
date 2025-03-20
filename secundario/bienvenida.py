@@ -48,3 +48,5 @@ def mostrar_bienvenida(page, nombre, mostrar_inicio):
             alignment=ft.MainAxisAlignment.CENTER
         )
     )
+
+# Asegúrate de que `mostrar_inicio` esté definido en tu código principal.
