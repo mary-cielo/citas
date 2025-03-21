@@ -1,19 +1,17 @@
 import sys
 import os
 import flet as ft
-import psycopg2
 import re
 from datetime import datetime, timedelta
+from db import conectar_db  # Asegúrate de que esto esté correctamente configurado
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'scrip'))
-from db import conectar_db
-
+# Variables globales
 dias_seleccionados = []
 mes_actual = datetime.now().month
 año_actual = datetime.now().year
 
-# Función para guardar cita en la base de datos
 def guardar_cita(fecha, hora, cliente, modelo_moto, color):
+    """Guarda una cita en la base de datos."""
     try:
         conn = conectar_db()
         with conn:
@@ -21,21 +19,24 @@ def guardar_cita(fecha, hora, cliente, modelo_moto, color):
             cursor.execute("SELECT * FROM citas WHERE fecha = %s AND hora = %s", (fecha, hora))
             if cursor.fetchone():
                 return "❌ La cita ya está ocupada."
-            cursor.execute("INSERT INTO citas (fecha, hora, cliente, modelo_moto, color) VALUES (%s, %s, %s, %s, %s)", (fecha, hora, cliente, modelo_moto, color))
+            cursor.execute(
+                "INSERT INTO citas (fecha, hora, cliente, modelo_moto, color) VALUES (%s, %s, %s, %s, %s)",
+                (fecha, hora, cliente, modelo_moto, color)
+            )
         return "✅ Cita reservada con éxito."
     except Exception as e:
         return f"❌ Error al guardar la cita: {e}"
 
-# Función para obtener todas las citas
 def obtener_citas():
+    """Obtiene todas las citas de la base de datos."""
     conn = conectar_db()
     with conn:
         cursor = conn.cursor()
         cursor.execute("SELECT fecha, hora, cliente, modelo_moto, color FROM citas ORDER BY fecha, hora")
         return cursor.fetchall()
 
-# Función para generar el calendario
 def generar_calendario(mes, año, page):
+    """Genera el calendario para el mes y año dados."""
     dias = []
     primer_dia = datetime(año, mes, 1)
     primer_dia_semana = primer_dia.weekday()
@@ -51,13 +52,9 @@ def generar_calendario(mes, año, page):
 
     for dia in range(1, total_dias + 1):
         fecha_actual = datetime(año, mes, dia)
-
-        def _seleccionar_fecha(e, d=fecha_actual):
-            seleccionar_fecha(d, page)
-
         dia_btn = ft.TextButton(
             str(dia),
-            on_click=_seleccionar_fecha,
+            on_click=lambda e, d=fecha_actual: seleccionar_fecha(d, page),
             style=ft.ButtonStyle(
                 color={"bg": "#006dff" if fecha_actual in dias_seleccionados else "#2A2A2A", "text": "white"}
             )
@@ -76,6 +73,7 @@ def generar_calendario(mes, año, page):
     return dias
 
 def seleccionar_fecha(fecha, page):
+    """Selecciona o deselecciona una fecha."""
     if fecha in dias_seleccionados:
         dias_seleccionados.remove(fecha)
     else:
@@ -85,13 +83,14 @@ def seleccionar_fecha(fecha, page):
     actualizar_pagina(page)
 
 def reservar_cita(e, page):
+    """Reserva una cita con los datos proporcionados."""
     fecha = fecha_seleccionada.value.replace("📅 ", "").strip()
     hora = entry_hora.value.strip()
     cliente = entry_cliente.value.strip()
     modelo_moto = entry_modelo_moto.value.strip()
     color = entry_color.value.strip()
 
-    if not fecha or not hora or not cliente or not modelo_moto or not color:
+    if not all([fecha, hora, cliente, modelo_moto, color]):
         mensaje.value = "⚠️ Debes completar todos los campos."
         page.update()
         return
@@ -114,8 +113,8 @@ def reservar_cita(e, page):
     actualizar_pagina(page)
 
 def cambiar_mes(cambio, page):
+    """Cambia el mes actual en el calendario."""
     global mes_actual, año_actual
-
     mes_actual += cambio
     if mes_actual < 1: 
         mes_actual = 12
@@ -123,10 +122,10 @@ def cambiar_mes(cambio, page):
     elif mes_actual > 12:
         mes_actual = 1
         año_actual += 1
-
     actualizar_pagina(page)
 
 def actualizar_pagina(page):
+    """Actualiza la página con el calendario y las citas."""
     citas = obtener_citas()
     lista_citas.controls.clear()
     for fecha, hora, cliente, modelo_moto, color in citas:
@@ -141,7 +140,6 @@ def actualizar_pagina(page):
                     ft.Text(f"{mes_actual}/{año_actual}", color="white", size=20),
                     ft.ElevatedButton(">", on_click=lambda e: cambiar_mes(1, page))  
                 ], alignment="center"),
-
                 fecha_seleccionada,
                 *generar_calendario(mes_actual, año_actual, page),
                 entry_hora,
@@ -150,7 +148,7 @@ def actualizar_pagina(page):
                 entry_color,
                 boton_reservar,
                 mensaje,
-                
+                lista_citas,
             ],
             alignment="center",
             spacing=10
@@ -158,13 +156,19 @@ def actualizar_pagina(page):
     )
     page.update()
 
+def mostrar_citas(page):
+    """Función para mostrar la interfaz de citas."""
+    actualizar_pagina(page)
+    return ft.Column(controls=[fecha_seleccionada, entry_hora, entry_cliente, entry_modelo_moto, entry_color, boton_reservar, mensaje, lista_citas])
+
 def main(page: ft.Page):
+    """Función principal para configurar la interfaz de reservas de citas."""
     global fecha_seleccionada, entry_hora, entry_cliente, entry_modelo_moto, entry_color, mensaje, boton_reservar, lista_citas
 
     page.title = "Reservar Citas"
     page.bgcolor = "#1E1E1E"
 
-    fecha_seleccionada = ft.Text("📅 Selecciona una fecha", weight=400,color="white")
+    fecha_seleccionada = ft.Text("📅 Selecciona una fecha", weight=400, color="white")
     entry_cliente = ft.TextField(label="Cliente", width=400, bgcolor="#2A2A2A", color="white", border_color="#006dff")
     entry_modelo_moto = ft.TextField(label="Modelo de la moto", width=400, bgcolor="#2A2A2A", color="white", border_color="#006dff")
     entry_color = ft.TextField(label="Color", width=400, bgcolor="#2A2A2A", color="white", border_color="#006dff")
