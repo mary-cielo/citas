@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login y Registro - Taller de Motos</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #00bcd4, #0288d1);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: row;
+      width: 90%;
+      max-width: 1000px;
+      background: #ffffff;
+      border-radius: 15px;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+      overflow: hidden;
+      transform: scale(0.98);
+      animation: slideIn 0.5s ease-out forwards;
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: scale(0.9);
+        opacity: 0;
+      }
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    .imagen {
+      background-color: #e1f5fe;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      width: 40%;
+    }
+
+    .imagen img {
+      max-width: 100%;
+      height: auto;
+      width: 250px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+      animation: bounceIn 1s ease-out forwards;
+    }
+
+    @keyframes bounceIn {
+      0% {
+        transform: translateY(-50px);
+      }
+      60% {
+        transform: translateY(10px);
+      }
+      80% {
+        transform: translateY(-5px);
+      }
+      100% {
+        transform: translateY(0);
+      }
+    }
+
+    .form {
+      flex: 1;
+      padding: 30px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      background-color: #ffffff;
+      box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.1);
+      opacity: 0;
+      animation: fadeIn 1s forwards;
+    }
+
+    @keyframes fadeIn {
+      to {
+        opacity: 1;
+      }
+    }
+
+    .form.hidden {
+      display: none;
+    }
+
+    h1 {
+      text-align: center;
+      color: #0288d1;
+      margin-bottom: 20px;
+      font-size: 2rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    input[type="text"],
+    input[type="password"] {
+      padding: 12px;
+      margin: 8px 0;
+      border: 1px solid #0288d1;
+      border-radius: 8px;
+      font-size: 16px;
+      transition: 0.3s;
+    }
+
+    input:focus {
+      border-color: #00bcd4;
+      outline: none;
+    }
+
+    button {
+      padding: 12px;
+      margin-top: 15px;
+      background-color: #0288d1;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #00bcd4;
+    }
+
+    .social-buttons {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 15px;
+    }
+
+    .social-buttons a {
+      flex: 1;
+      text-align: center;
+      margin: 0 5px;
+      padding: 10px 0;
+      color: #fff;
+      border-radius: 6px;
+      text-decoration: none;
+      transition: 0.3s;
+    }
+
+    .google {
+      background-color: #db4437;
+    }
+
+    .facebook {
+      background-color: #3b5998;
+    }
+
+    .twitter {
+      background-color: #1da1f2;
+    }
+
+    .social-buttons a:hover {
+      opacity: 0.9;
+    }
+
+    .toggle {
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    .toggle a {
+      color: #0288d1;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    .toggle a:hover {
+      text-decoration: underline;
+    }
+
+    @media (max-width: 700px) {
+      .container {
+        flex-direction: column;
+        margin: 20px;
+      }
+
+      .imagen {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Imagen de bienvenida -->
+    <div class="imagen">
+      <img src="iconos/moto.ico" alt="Bienvenida al Taller de Motos">
+    </div>
+
+    <!-- Formulario de Login -->
+    <div class="form" id="login-form">
+      <h1>Iniciar Sesión</h1>
+      <input type="text" placeholder="Correo Electrónico" />
+      <input type="password" placeholder="Contraseña" />
+      <button>Entrar</button>
+      <div class="social-buttons">
+        <a href="#" class="google">G+</a>
+        <a href="https://www.facebook.com/rudolf.alfarodiesel" class="facebook" target="_blank">Facebook</a>
+        <a href="#" class="twitter">Twitter</a>
+      </div>
+      <div class="toggle">
+        <p>¿No tienes cuenta? <a href="#" onclick="toggleForms()">Regístrate</a></p>
+      </div>
+    </div>
+
+    <!-- Formulario de Registro -->
+    <div class="form hidden" id="register-form">
+      <h1>Registrarse</h1>
+      <input type="text" placeholder="Nombre de Usuario" />
+      <input type="text" placeholder="Correo Electrónico" />
+      <input type="password" placeholder="Contraseña" />
+      <input type="password" placeholder="Confirmar Contraseña" />
+      <button>Registrarse</button>
+      <div class="toggle">
+        <p>¿Ya tienes cuenta? <a href="#" onclick="toggleForms()">Inicia Sesión</a></p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function toggleForms() {
+      const loginForm = document.getElementById('login-form');
+      const registerForm = document.getElementById('register-form');
+
+      // Alternar visibilidad de formularios
+      if (loginForm.classList.contains('hidden')) {
+        loginForm.classList.remove('hidden');
+        registerForm.classList.add('hidden');
+      } else {
+        loginForm.classList.add('hidden');
+        registerForm.classList.remove('hidden');
+      }
+    }
+  </script>
+</body>
+</html>

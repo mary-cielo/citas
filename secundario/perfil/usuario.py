@@ -1,9 +1,9 @@
 import flet as ft
 import sys
 import os
-import asyncio  # Para manejar operaciones asíncronas
+import asyncio
 
-# Ajustar la ruta para importar db correctamente
+# Ajustar ruta para importar db correctamente
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'scrip'))
 from db import conectar_db
 
@@ -13,7 +13,12 @@ async def obtener_usuario(usuario_id):
         conn = conectar_db()
         cursor = conn.cursor()
 
-        cursor.execute("SELECT nombre, apellido, correo, dni, celular FROM usuario WHERE id = %s", (usuario_id,))
+        # Columna corregida: nombre_usuario
+        cursor.execute("""
+            SELECT nombre_usuario, celular, correo, contraseña 
+            FROM usuario 
+            WHERE id = %s
+        """, (usuario_id,))
         usuario = cursor.fetchone()
 
         cursor.close()
@@ -22,29 +27,23 @@ async def obtener_usuario(usuario_id):
         if usuario:
             return {
                 "nombre": usuario[0],
-                "apellido": usuario[1],
+                "celular": usuario[1],
                 "correo": usuario[2],
-                "dni": usuario[3],
-                "celular": usuario[4],
+                "contraseña": usuario[3],  # Solo si lo necesitas
             }
-        else:
-            return None
+        return None
 
     except Exception as e:
-        print(f"❌ Error al obtener los datos del usuario: {e}")
+        print(f"Error al obtener datos del usuario: {e}")
         return None
 
 def mostrar_perfil(page, usuario_id=1):
-    """Muestra el perfil del usuario en la interfaz principal con un diseño moderno."""
-    
+    """Muestra el perfil del usuario con un diseño moderno."""
     async def cargar_usuario():
         usuario = await obtener_usuario(usuario_id)
-        
-        # Limpiar la pantalla antes de mostrar la información
         page.views.clear()
-        
+
         if usuario:
-            # Crear la vista del perfil con diseño futurista
             perfil_view = ft.View(
                 "/usuario",
                 controls=[
@@ -57,30 +56,19 @@ def mostrar_perfil(page, usuario_id=1):
                         content=ft.Column(
                             controls=[
                                 ft.Icon(name=ft.icons.ACCOUNT_CIRCLE, size=120, color=ft.colors.LIGHT_BLUE),
-                                ft.Text(f"{usuario['nombre']} {usuario['apellido']}", size=26, color=ft.colors.WHITE, weight=ft.FontWeight.BOLD),
+                                ft.Text(usuario['nombre'], size=26, color=ft.colors.WHITE, weight=ft.FontWeight.BOLD),
                                 ft.Divider(color=ft.colors.BLUE_ACCENT, thickness=2),
                                 ft.Container(
                                     content=ft.Column(
                                         controls=[
                                             ft.Row(
-                                                [
-                                                    ft.Icon(ft.icons.EMAIL, color=ft.colors.CYAN),
-                                                    ft.Text(usuario['correo'], size=18, color=ft.colors.WHITE)
-                                                ],
+                                                [ft.Icon(ft.icons.EMAIL, color=ft.colors.CYAN),
+                                                 ft.Text(usuario['correo'], size=18, color=ft.colors.WHITE)],
                                                 alignment=ft.MainAxisAlignment.START,
                                             ),
                                             ft.Row(
-                                                [
-                                                    ft.Icon(ft.icons.CREDIT_CARD, color=ft.colors.CYAN),
-                                                    ft.Text(usuario['dni'], size=18, color=ft.colors.WHITE)
-                                                ],
-                                                alignment=ft.MainAxisAlignment.START,
-                                            ),
-                                            ft.Row(
-                                                [
-                                                    ft.Icon(ft.icons.PHONE, color=ft.colors.CYAN),
-                                                    ft.Text(usuario['celular'], size=18, color=ft.colors.WHITE)
-                                                ],
+                                                [ft.Icon(ft.icons.PHONE, color=ft.colors.CYAN),
+                                                 ft.Text(usuario['celular'], size=18, color=ft.colors.WHITE)],
                                                 alignment=ft.MainAxisAlignment.START,
                                             ),
                                         ],
@@ -96,7 +84,7 @@ def mostrar_perfil(page, usuario_id=1):
                                     icon=ft.icons.ARROW_BACK,
                                     on_click=lambda e: page.go("/"),
                                     style=ft.ButtonStyle(
-                                        color=ft.colors.WHITE, 
+                                        color=ft.colors.WHITE,
                                         bgcolor=ft.colors.BLUE_700,
                                         shape=ft.RoundedRectangleBorder(radius=10),
                                         elevation=3,
@@ -120,5 +108,4 @@ def mostrar_perfil(page, usuario_id=1):
 
         page.update()
 
-    # Ejecutar la función asíncrona para cargar datos del usuario
     asyncio.run(cargar_usuario())
