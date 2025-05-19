@@ -1,6 +1,6 @@
 import flet as ft
 from db import conectar_db  # Asegúrate de configurar correctamente la conexión
-from citas.citas2 import mostrar_formulario_nueva_cita 
+from secundario.citas.citas2 import mostrar_formulario_nueva_cita 
  # Importación de la función correcta
 
 # Estilos y colores

@@ -14,6 +14,8 @@ def inicio_inicio(page):
     from secundario.servicio.ordenservicio import crear_orden_servicio
     from secundario.citas.totalproy import vista_proyecciones_ingresos
     from secundario.servicio.servicios import mostrar_servicios_app
+    from secundario.mecanicos.mecanicos import mostrar_mecanicos
+
 
     # ============================
     # Constantes de Estilo
@@ -23,6 +25,11 @@ def inicio_inicio(page):
     PRIMARY_COLOR = "#1976D2"
     SECONDARY_COLOR = "#1565C0"
     TEXT_COLOR = "#BBDEFB"
+
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    image_paths = [
+        os.path.join(base_dir, "iconos", "logo.png"),
+    ]
 
     # ============================
     # Función para mostrar el inicio
@@ -34,7 +41,6 @@ def inicio_inicio(page):
             ft.ElevatedButton("Ver Perfil", on_click=lambda e: page.go("/usuario"), style=build_button_style(PRIMARY_COLOR)),
             ft.ElevatedButton("Ver Proyección de Ingresos", on_click=lambda e: page.go("/citas/totalproy"), style=build_button_style(SECONDARY_COLOR)),
             ft.ElevatedButton("Ver Proyección de Citas", on_click=lambda e: page.go("/citas/citasproy"), style=build_button_style(PRIMARY_COLOR)),
-            ft.ElevatedButton("Ir al Inicio Secundario", on_click=lambda e: page.go("/secundario/inicio"), style=build_button_style(PRIMARY_COLOR)),
         ]
         preview = ft.Container(
             content=ft.Text("📈 Próximas proyecciones disponibles. ¡Haz clic para más detalles!", size=16, color=TEXT_COLOR),
@@ -42,20 +48,7 @@ def inicio_inicio(page):
         )
         return ft.Container(padding=40, border_radius=20, content=ft.Column(controls=[welcome_text, *buttons, preview], alignment=ft.MainAxisAlignment.CENTER, spacing=25))
 
-    def mostrar_inicio_secundario(page: ft.Page) -> ft.Container:
-        welcome_text = ft.Text("Bienvenido al Inicio Secundario", size=30, color=TEXT_COLOR, weight=ft.FontWeight.BOLD)
-        buttons = [
-            ft.ElevatedButton("Crear Orden de Servicio", on_click=lambda e: page.go("/servicio/ordenservicio"), style=build_button_style(PRIMARY_COLOR)),
-            ft.ElevatedButton("Ver Perfil", on_click=lambda e: page.go("/usuario"), style=build_button_style(PRIMARY_COLOR)),
-            ft.ElevatedButton("Ver Proyección de Ingresos", on_click=lambda e: page.go("/citas/totalproy"), style=build_button_style(SECONDARY_COLOR)),
-            ft.ElevatedButton("Ver Proyección de Citas", on_click=lambda e: page.go("/citas/citasproy"), style=build_button_style(PRIMARY_COLOR)),
-        ]
-        preview = ft.Container(
-            content=ft.Text("📈 Aquí tienes más detalles. ¡Haz clic para más información!", size=16, color=TEXT_COLOR),
-            padding=15, bgcolor="#1e1e1e", border_radius=12, alignment=ft.alignment.center,
-        )
-        return ft.Container(padding=40, border_radius=20, content=ft.Column(controls=[welcome_text, *buttons, preview], alignment=ft.MainAxisAlignment.CENTER, spacing=25))
-
+    
     def main(page: ft.Page):
         page.title = "Tablero de Servicio"
         page.bgcolor = BG_COLOR
@@ -75,7 +68,7 @@ def inicio_inicio(page):
                 "/citas/citasproy": lambda: vista_proyecciones_citas(page),
                 "/servicio/ordenservicio": lambda: crear_orden_servicio(page),
                 "/servicio/servicios": lambda: mostrar_servicios_app(page),
-                "/secundario/inicio": lambda: mostrar_inicio_secundario(page),
+                "/mecanicos/mecanicos": lambda: mostrar_mecanicos(page),  # Ruta de mecánicos
             }
 
             content = route_views.get(page.route, lambda: mostrar_inicio(page))()
@@ -101,16 +94,15 @@ def inicio_inicio(page):
             ("Inicio", ft.Icons.HOME, lambda e: page.go("/")),
             ("Servicios", ft.Icons.DESIGN_SERVICES, lambda e: page.go("/servicio/servicios")),
             ("Citas", ft.Icons.CALENDAR_TODAY, lambda e: page.go("/citas")),
+            ("Mecánicos", ft.Icons.SETTINGS, lambda e: page.go("/mecanicos/mecanicos")),  # Agregado al footer
         ]
         return ft.Container(
             bgcolor=APP_BAR_COLOR,
             padding=15,
             alignment=ft.alignment.center,
             content=ft.Row(
-                controls=[
-                    ft.ElevatedButton(text=label, icon=icon, on_click=callback, style=build_button_style(PRIMARY_COLOR))
-                    for label, icon, callback in nav_buttons
-                ],
+                controls=[ft.ElevatedButton(text=label, icon=icon, on_click=callback, style=build_button_style(PRIMARY_COLOR))
+                          for label, icon, callback in nav_buttons],
                 alignment=ft.MainAxisAlignment.SPACE_AROUND,
                 spacing=15,
             ),
@@ -122,8 +114,7 @@ def inicio_inicio(page):
             icon_color=TEXT_COLOR,
             items=[
                 ft.PopupMenuItem(text="Eventos", on_click=lambda e: page.go("/citas/eventos")),
-                ft.PopupMenuItem(text="Mecánicos", on_click=lambda e: page.go("/mecanicos")),
-                ft.PopupMenuItem(text="Clientes", on_click=lambda e: page.go("/cliente")),
+                ft.PopupMenuItem(text="Mecánicos", on_click=lambda e: page.go("/mecanicos/mecanicos")),  # Ruta de mecánicos en el menú
             ],
         )
 
@@ -133,5 +124,6 @@ def inicio_inicio(page):
             bgcolor=bg_color,
             shape=ft.RoundedRectangleBorder(radius=15),
         )
-    
+
+
     main(page)

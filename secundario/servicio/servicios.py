@@ -7,12 +7,12 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'scrip'))
 from db import conectar_db
 
 # 🎨 Colores
-COLOR_TEXTO = "#FFFFFF"
-COLOR_FONDO_TARJETA = "#E3F2FD"
+COLOR_TEXTO = "#BBDEFB"
+COLOR_FONDO_TARJETA = "#1E1E1E"
 COLOR_BORDE_TARJETA = "#90CAF9"
 COLOR_BOTON = "#1976D2"
 COLOR_SOMBRA = "#BBDEFB"
-NUMERO_COLUMNAS = 2
+NUMERO_COLUMNAS = 1
 
 
 def limpiar_descripciones(texto):
@@ -70,7 +70,7 @@ def obtener_lista_mecanicos():
 
 
 def mostrar_servicios_app(page: ft.Page):
-    contenedor_resultado = ft.Column()
+    contenedor_resultado = ft.Column(expand=True, spacing=10)
 
     mecanicos = obtener_lista_mecanicos()
     opciones_mecanico = [ft.dropdown.Option("Todos")] + [ft.dropdown.Option(m) for m in mecanicos]
@@ -120,6 +120,7 @@ def mostrar_servicios_app(page: ft.Page):
                     ], spacing=6),
                     bgcolor=COLOR_FONDO_TARJETA,
                     padding=18,
+                    width=1300,
                     border_radius=12,
                     border=ft.border.all(1, COLOR_BORDE_TARJETA),
                     shadow=ft.BoxShadow(blur_radius=12, color=COLOR_SOMBRA),
@@ -128,7 +129,7 @@ def mostrar_servicios_app(page: ft.Page):
 
                 columnas[col_index].append(tarjeta)
 
-            filas = ft.Row([ft.Column(col, expand=True) for col in columnas])
+            filas = ft.Row([ft.Column(col, expand=True, spacing=10) for col in columnas], spacing=10)
             contenedor_resultado.controls.append(ft.Container(content=filas, padding=20))
 
         page.update()
@@ -148,8 +149,18 @@ def mostrar_servicios_app(page: ft.Page):
         padding=20
     )
 
-    return ft.Column(controls=[
-        ft.Text("📋 Historial de Servicios", size=24, weight="bold", color="white"),
-        filtros_row,
-        contenedor_resultado
-    ], scroll="auto")
+    return ft.Container(
+        expand=True,
+        content=ft.Column(
+            controls=[
+                ft.Text("📋 Historial de Servicios", size=24, weight="bold", color="white"),
+                filtros_row,
+                ft.Divider(),
+                contenedor_resultado
+            ],
+            scroll=ft.ScrollMode.AUTO,
+            expand=True,
+            spacing=15
+        )
+    )
+

@@ -8,7 +8,7 @@ from db import conectar_db
 BG_COLOR = "#121212"
 APP_BAR_COLOR = "#0D47A1"
 PRIMARY_COLOR = "#1976D2"
-TEXT_COLOR = "#BBDEFB"  
+TEXT_COLOR = "#BBDEFB"
 CARD_COLOR = "#1E1E1E"
 BUTTON_RADIUS = 10
 
@@ -127,9 +127,11 @@ def mostrar_formulario_nueva_cita(page: ft.Page):
         finally:
             page.update()
 
-            page.go("/citas")
-            from citas.citas import mostrar_citas 
-            mostrar_citas(page)
+            # Limpiar las vistas y redirigir a la vista de citas de forma clara
+            page.views.clear()  # Limpiar cualquier vista previa
+            from citas.citas import mostrar_citas  # Importar la función que muestra las citas
+            mostrar_citas(page)  # Llamar la función que mostrará las citas en la página principal
+            page.update()
 
     formulario = ft.Column([        
         ft.Row([fecha_picker, ft.IconButton(icon=ft.icons.CALENDAR_MONTH_OUTLINED, on_click=abrir_fecha)]),  
@@ -146,6 +148,7 @@ def mostrar_formulario_nueva_cita(page: ft.Page):
         mensaje
     ], spacing=10)
 
+    # Flecha para regresar a la vista de citas
     app_bar_buttons = [
         ft.IconButton(
             icon=ft.icons.ARROW_BACK,
@@ -154,6 +157,7 @@ def mostrar_formulario_nueva_cita(page: ft.Page):
         )
     ]
 
+    # Agregar la vista de nueva cita
     page.views.append(ft.View("/nueva_cita", [
         ft.AppBar(
             title=ft.Text("Nueva Cita"), 

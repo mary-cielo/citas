@@ -4,7 +4,7 @@ import sys
 from datetime import datetime, date, time
 
 # Configuración
-NUMERO_COLUMNAS = 3  # Cambiar a 1, 2 o 3 según preferencia
+NUMERO_COLUMNAS = 2  
 
 # Rutas
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'scrip'))

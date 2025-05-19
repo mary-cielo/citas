@@ -38,10 +38,9 @@ async def obtener_usuario(usuario_id):
         return None
 
 def mostrar_perfil(page, usuario_id=1):
-    """Muestra el perfil del usuario con un diseño moderno."""
-    async def cargar_usuario():
+    """Muestra el perfil del usuario de forma asincrónica sin romper el flujo."""
+    async def cargar_usuario_async():
         usuario = await obtener_usuario(usuario_id)
-        page.views.clear()
 
         if usuario:
             perfil_view = ft.View(
@@ -102,10 +101,14 @@ def mostrar_perfil(page, usuario_id=1):
                     )
                 ]
             )
+            page.views.clear()
             page.views.append(perfil_view)
         else:
-            page.views.append(ft.Text("⚠️ Usuario no encontrado", color=ft.colors.RED_400, size=18))
-
+            page.views.clear()
+            page.views.append(ft.View("/", controls=[
+                ft.Text("⚠️ Usuario no encontrado", color=ft.colors.RED_400, size=18)
+            ]))
         page.update()
 
-    asyncio.run(cargar_usuario())
+    # Agenda la tarea asincrónica sin bloquear el loop de Flet
+    page.run_task(cargar_usuario_async)

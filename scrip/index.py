@@ -3,13 +3,13 @@ import sys
 import flet as ft
 import psycopg2
 import bcrypt
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from secundario.inicio import inicio_inicio  # Importar el tablero principal
 
-# Agrega la ruta al módulo de conexión
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'secundario'))
+from secundario.inicio import inicio_inicio
 from db import conectar_db
+
+# Ruta absoluta al logo
+logo_path = os.path.abspath("iconos/logo.png")
 
 # --------- UTILIDADES ---------
 def hash_password(password):
@@ -17,6 +17,16 @@ def hash_password(password):
 
 def verificar_password(password, hashed):
     return bcrypt.checkpw(password.encode(), hashed.encode())
+
+def obtener_correos_usuarios():
+    try:
+        with conectar_db() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT correo FROM usuario")
+                return [row[0] for row in cursor.fetchall()]
+    except Exception as e:
+        print(f"❌ Error al obtener correos: {e}")
+        return []
 
 # --------- BASE DE DATOS ---------
 def insertar_usuario(nombre_usuario, celular, correo, contraseña):
@@ -27,10 +37,10 @@ def insertar_usuario(nombre_usuario, celular, correo, contraseña):
                 cursor.execute("SELECT 1 FROM usuario WHERE correo = %s", (correo,))
                 if cursor.fetchone():
                     return "⚠️ Este correo ya está registrado."
-
-                query = """INSERT INTO usuario (nombre_usuario, celular, correo, contraseña) 
-                           VALUES (%s, %s, %s, %s)"""
-                cursor.execute(query, (nombre_usuario, celular, correo, hashed_password))
+                cursor.execute(
+                    "INSERT INTO usuario (nombre_usuario, celular, correo, contraseña) VALUES (%s, %s, %s, %s)",
+                    (nombre_usuario, celular, correo, hashed_password)
+                )
                 conn.commit()
         return "✅ ¡Cuenta creada con éxito!"
     except psycopg2.Error as e:
@@ -60,6 +70,10 @@ def main(page: ft.Page):
     page.window_width = 900
     page.window_height = 500
     page.bgcolor = "#1E1E1E"
+    logo_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'iconos', 'logo.png'))
+    logo = ft.Image(src=logo_path, width=180, height=180, visible=True)
+
+    correos_disponibles = obtener_correos_usuarios()
 
     def mostrar_mensaje(texto, color):
         page.snack_bar = ft.SnackBar(content=ft.Text(texto), bgcolor=color)
@@ -69,11 +83,13 @@ def main(page: ft.Page):
     def mostrar_login(e):
         frame_login.visible = True
         frame_registro.visible = False
+        logo.visible = False  # Ocultar logo al entrar
         page.update()
 
     def mostrar_registro(e):
         frame_login.visible = False
         frame_registro.visible = True
+        logo.visible = False  # Ocultar logo al entrar
         page.update()
 
     def registrar_usuario(e):
@@ -86,10 +102,8 @@ def main(page: ft.Page):
         mostrar_mensaje(resultado, "green" if "✅" in resultado else "red")
 
         if "✅" in resultado:
-            entry_nombre.value = ""
-            entry_celular.value = ""
-            entry_correo.value = ""
-            entry_contraseña.value = ""
+            for field in [entry_nombre, entry_celular, entry_correo, entry_contraseña]:
+                field.value = ""
             page.update()
 
     def iniciar_sesion_usuario(e):
@@ -100,19 +114,68 @@ def main(page: ft.Page):
         mostrar_mensaje(resultado, "green" if "✅" in resultado else "red")
 
         if nombre:
-            # Limpiar página actual y redirigir al tablero principal
+            logo.visible = False
             page.views.clear()
             page.controls.clear()
             page.update()
-
-            # Ejecutar tablero principal
             inicio_inicio(page)
 
-    # ----------- REGISTRO -----------
+    # ----------- AUTOCOMPLETADO DE CORREO -----------
+
+    sugerencias_column = ft.Column(spacing=4, visible=False)
+
+    def seleccionar_sugerencia(correo):
+        entry_correo_login.value = correo
+        sugerencias_column.visible = False
+        page.update()
+
+    def filtrar_sugerencias(valor):
+        sugerencias_column.controls.clear()
+        if valor:
+            sugerencias = [c for c in correos_disponibles if c.lower().startswith(valor.lower())][:5]
+            for correo in sugerencias:
+                sugerencias_column.controls.append(
+                    ft.GestureDetector(
+                        content=ft.Text(correo, color="#00BFFF", size=14, tooltip="Haz clic para completar"),
+                        on_tap=lambda e, correo=correo: seleccionar_sugerencia(correo)
+                    )
+                )
+            sugerencias_column.visible = True
+        else:
+            sugerencias_column.visible = False
+        page.update()
+
+    # ----------- CAMPOS DE TEXTO -----------
+
+    entry_correo_login = ft.TextField(label="Correo", bgcolor="#333", color="white", border_color="#006dff",
+                                      on_change=lambda e: filtrar_sugerencias(e.control.value))
+    entry_contraseña_login = ft.TextField(label="Contraseña", password=True, bgcolor="#333", color="white", border_color="#006dff")
+
     entry_nombre = ft.TextField(label="Nombre", bgcolor="#333", color="white", border_color="#006dff")
     entry_celular = ft.TextField(label="Celular", bgcolor="#333", color="white", border_color="#006dff")
     entry_correo = ft.TextField(label="Correo", bgcolor="#333", color="white", border_color="#006dff")
     entry_contraseña = ft.TextField(label="Contraseña", password=True, bgcolor="#333", color="white", border_color="#006dff")
+
+    # ----------- LOGO SOLO AL INICIO -----------
+
+    logo = ft.Image(src=logo_path, width=180, height=180, visible=True)
+
+    # ----------- FRAMES -----------
+
+    frame_login = ft.Container(
+        visible=False,
+        content=ft.Column(
+            [
+                ft.Text("Iniciar Sesión", size=20, weight="bold", color="white"),
+                entry_correo_login,
+                sugerencias_column,
+                entry_contraseña_login,
+                ft.ElevatedButton("INGRESAR", bgcolor="#006dff", color="white", on_click=iniciar_sesion_usuario)
+            ],
+            alignment="center",
+            spacing=10
+        )
+    )
 
     frame_registro = ft.Container(
         visible=False,
@@ -122,26 +185,12 @@ def main(page: ft.Page):
                 entry_nombre, entry_celular, entry_correo, entry_contraseña,
                 ft.ElevatedButton("CREAR CUENTA", bgcolor="#006dff", color="white", on_click=registrar_usuario)
             ],
-            alignment="center", spacing=10
+            alignment="center",
+            spacing=10
         )
     )
 
-    # ----------- LOGIN -----------
-    entry_correo_login = ft.TextField(label="Correo", bgcolor="#333", color="white", border_color="#006dff")
-    entry_contraseña_login = ft.TextField(label="Contraseña", password=True, bgcolor="#333", color="white", border_color="#006dff")
-
-    frame_login = ft.Container(
-        visible=False,
-        content=ft.Column(
-            [
-                ft.Text("Iniciar Sesión", size=20, weight="bold", color="white"),
-                entry_correo_login,
-                entry_contraseña_login,
-                ft.ElevatedButton("INGRESAR", bgcolor="#006dff", color="white", on_click=iniciar_sesion_usuario)
-            ],
-            alignment="center", spacing=10
-        )
-    )
+    # ----------- PANEL IZQUIERDO -----------
 
     panel_izquierdo = ft.Container(
         width=300, height=500, bgcolor="#000", border_radius=10, padding=30,
@@ -157,15 +206,33 @@ def main(page: ft.Page):
                 ft.Divider(color="#555"),
                 ft.Text("© 2025 Rudolf Motos", size=12, color="#BBBBBB", weight="bold"),
                 ft.Text("Todos los derechos reservados.", size=12, color="#BBBBBB", italic=True),
+                ft.Text("Creado por JMJ.", size=12, color="#BBBBBB", italic=True),
             ],
-            alignment="center", spacing=15
+            alignment="center",
+            spacing=15
         )
     )
+
+    # ----------- CONTENIDO PRINCIPAL -----------
 
     stack_contenido = ft.Stack([frame_login, frame_registro])
 
     page.add(
-        ft.Row([panel_izquierdo, stack_contenido], alignment="center", spacing=30)
+        ft.Row(
+            [
+                panel_izquierdo,
+                ft.Row(
+                    [
+                        stack_contenido,
+                        ft.Container(logo, alignment=ft.alignment.center, padding=20)
+                    ],
+                    spacing=30,
+                    alignment="center"
+                )
+            ],
+            alignment="center",
+            spacing=30
+        )
     )
 
 # Lanzar app

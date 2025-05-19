@@ -66,9 +66,20 @@ def crear_orden_servicio(page: ft.Page):
 
     mecanico_dropdown = ft.Dropdown(
         label="Nombre del Mecánico",
-        options=[ft.dropdown.Option(name) for name in ["Rodolfo", "Mijael", "Julio"]],
+        options=[ft.dropdown.Option(name) for name in ["Rodolfo", "Mijael", "Julio", "Salvador", "Dani", "Marvin", "Rusbel"]],
         width=400
     )
+    nuevo_mecanico = ft.TextField(label="Agregar nuevo mecánico", width=300)
+    btn_agregar_mecanico = ft.ElevatedButton("➕ Añadir", on_click=lambda e: agregar_mecanico())
+
+    def agregar_mecanico():
+        nombre = nuevo_mecanico.value.strip()
+        if nombre and nombre not in [op.key for op in mecanico_dropdown.options]:
+            mecanico_dropdown.options.append(ft.dropdown.Option(nombre))
+            mecanico_dropdown.value = nombre  # Opcional: selecciona el nuevo nombre
+            nuevo_mecanico.value = ""
+            page.update()
+
 
     cliente_nombre = ft.TextField(label="Nombre", width=300)
     cliente_dni = ft.TextField(label="DNI", width=200)
@@ -163,13 +174,12 @@ def crear_orden_servicio(page: ft.Page):
     def calcular_faltante():
         total_amount = extraer_numero(total.value.strip())  # Obtener el total
         adelanto = float(pago_adelantado.value or 0)  # Obtener el monto adelantado
+        if adelanto > total_amount:
+            page.add(ft.Text("❌ El pago adelantado no puede ser mayor que el total.", color=ft.Colors.RED))
+            return
         faltante = max(0, total_amount - adelanto)  # Calcular faltante
 
-        if adelanto > 0:
-            pago_faltante_display.value = f"Falta por pagar: S/. {faltante:.2f}"
-        else:
-            pago_faltante_display.value = "Falta por pagar: S/. 0.00"  # Mantener en 0.00 si no hay adelanto
-
+        pago_faltante_display.value = f"Falta por pagar: S/. {faltante:.2f}"
         page.update()
 
     observaciones = ft.TextField(label="Observaciones", multiline=True, width=400)
@@ -190,12 +200,16 @@ def crear_orden_servicio(page: ft.Page):
         page.update()
 
     def guardar_en_db(e):
-        fecha_ing = validar_fecha(fecha_ingreso.value)
-        fecha_sal = validar_fecha(fecha_salida.value)
+        fecha_ing_dt = validar_fecha(fecha_ingreso.value)
+        fecha_sal_dt = validar_fecha(fecha_salida.value)
 
-        if fecha_ing is None or fecha_sal is None:
+        if fecha_ing_dt is None or fecha_sal_dt is None:
             print("❌ Error: Fecha incorrecta.")
             return
+
+        # Convertimos datetime a string para evitar errores en SQL
+        fecha_ing = fecha_ing_dt.strftime("%Y-%m-%d %H:%M:%S")
+        fecha_sal = fecha_sal_dt.strftime("%Y-%m-%d %H:%M:%S")
 
         trabajo_desc = " - ".join([f"{row.controls[0].value} (S/.{row.controls[1].value})" for row in trabajos.controls])
         repuestos_desc = " - ".join([f"{row.controls[0].value} ({row.controls[1].value} x S/.{row.controls[2].value})" for row in repuestos.controls])
@@ -204,7 +218,7 @@ def crear_orden_servicio(page: ft.Page):
         folio = obtener_ultimo_folio()
         folio_text.value = f"Folio: {folio}"
 
-        mecanico = mecanico_dropdown.value or ""
+        mecanico_nombre = mecanico_dropdown.value or ""
         cliente_nombre_value = cliente_nombre.value or ""
         cliente_dni_value = cliente_dni.value or ""
         cliente_telefono_value = cliente_telefono.value or ""
@@ -214,24 +228,21 @@ def crear_orden_servicio(page: ft.Page):
         vehiculo_placa_value = vehiculo_placa.value or ""
         vehiculo_color_value = vehiculo_color.value or ""
         vehiculo_numero_serie_value = vehiculo_numero_serie.value or ""
-        ingreso_grua_value = ingreso_grua.value or False
-
-        # Inicializar repuestos_precio_unitario
-        repuestos_precio_unitario = 0.00
+        ingreso_grua_value = bool(ingreso_grua.value)  # ✅ asegurar booleano
 
         descuento_trabajos_value = float(descuento_trabajos.value or 0.00)
         descuento_repuestos_value = float(descuento_repuestos.value or 0.00)
         pago_adelantado_value = float(pago_adelantado.value or 0.00)
         metodo_pago_value = metodo_pago.value or "Efectivo"
-        pago_completado_value = pago_completado.value == "si"
+        pago_completado_value = True if pago_completado.value == "si" else False
 
         total_trabajos = sum(float(row.controls[1].value or 0) for row in trabajos.controls)
         total_repuestos = sum(float(row.controls[1].value or 0) * float(row.controls[2].value or 0) for row in repuestos.controls)
         total_trabajos_terceros = sum(float(row.controls[1].value or 0) for row in trabajos_terceros.controls)
 
-        total_trabajos_value = total_trabajos if total_trabajos > 0 else 0.00
-        total_repuestos_value = total_repuestos if total_repuestos > 0 else 0.00
-        total_trabajos_terceros_value = total_trabajos_terceros if total_trabajos_terceros > 0 else 0.00
+        total_trabajos_value = round(total_trabajos, 2)
+        total_repuestos_value = round(total_repuestos, 2)
+        total_trabajos_terceros_value = round(total_trabajos_terceros, 2)
 
         try:
             with conectar_db() as conn:
@@ -239,70 +250,148 @@ def crear_orden_servicio(page: ft.Page):
                     cursor.execute(
                         """
                         INSERT INTO ordenservicio 
-                        (folio, mecanico, cliente_nombre, cliente_dni, cliente_telefono, 
+                        (folio, mecanico_nombre, cliente_nombre, cliente_dni, cliente_telefono, 
                         vehiculo_marca, vehiculo_modelo, vehiculo_kilometraje, vehiculo_placa,
                         vehiculo_color, vehiculo_numero_serie, ingreso_grua, 
-                        fecha_ingreso, fecha_salida, trabajos, repuestos, trabajos_terceros,
-                        descuento_trabajos, descuento_repuestos, pago_adelantado, metodo_pago, 
-                        pago_completado, total_trabajos, total_repuestos, total_trabajos_terceros, 
-                        observaciones)
+                        fecha_ingreso, fecha_salida, trabajo_descripcion, trabajo_total,
+                        repuestos_descripcion, repuestos_cantidad, repuestos_precio_unitario, repuestos_total,
+                        trabajo_terceros_descripcion, trabajo_terceros_precio,
+                        subtotal, descuento, igv, total, observaciones, metodo_pago, 
+                        pago_completado, pago_adelantado, pago_faltante, descuento_repuestos)
                         VALUES
-                        (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+                        (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                        %s, %s, %s, %s, %s, %s,
+                        %s, %s, %s, %s, %s, %s,
+                        %s, %s, %s, %s);
                         """,
-                        (folio, mecanico, cliente_nombre_value, cliente_dni_value, cliente_telefono_value,
-                         vehiculo_marca_value, vehiculo_modelo_value, vehiculo_kilometraje_value,
-                         vehiculo_placa_value, vehiculo_color_value, vehiculo_numero_serie_value,
-                         ingreso_grua_value, fecha_ing, fecha_sal, trabajo_desc, repuestos_desc, trabajos_terc_desc,
-                         descuento_trabajos_value, descuento_repuestos_value, pago_adelantado_value, metodo_pago_value,
-                         pago_completado_value, total_trabajos_value, total_repuestos_value, total_trabajos_terceros_value,
-                         observaciones.value or "")
+                        (
+                            folio, mecanico_nombre, cliente_nombre_value, cliente_dni_value, cliente_telefono_value,
+                            vehiculo_marca_value, vehiculo_modelo_value, vehiculo_kilometraje_value,
+                            vehiculo_placa_value, vehiculo_color_value, vehiculo_numero_serie_value,
+                            ingreso_grua_value, fecha_ing, fecha_sal, trabajo_desc, total_trabajos_value,
+                            repuestos_desc, calcular_repuestos_cantidad(repuestos_desc),  # repuestos cantidad
+                            0.00, total_repuestos_value,  # No tienes precio unitario promedio, así que 0
+                            trabajos_terc_desc, total_trabajos_terceros_value,
+                            total_trabajos_value + total_repuestos_value + total_trabajos_terceros_value,  # subtotal
+                            descuento_trabajos_value + descuento_repuestos_value,
+                            (total_trabajos_value + total_repuestos_value + total_trabajos_terceros_value) * 0.18,  # igv
+                            total_trabajos_value + total_repuestos_value + total_trabajos_terceros_value,  # total
+                            observaciones.value or "", metodo_pago_value, pago_completado_value,
+                            pago_adelantado_value,
+                            max(0, (total_trabajos_value + total_repuestos_value + total_trabajos_terceros_value) - pago_adelantado_value),
+                            descuento_repuestos_value
+                        )
                     )
+
                     conn.commit()
+
             print(f"✔️ Orden de servicio {folio} guardada correctamente.")
             reiniciar_formulario(e)  # Limpiar el formulario tras guardar
+            page.go("/inicio")  # Redirige a la ruta /inicio
+
+
         except Exception as ex:
             print(f"❌ Error al guardar la orden de servicio: {ex}")
+
 
     # UI Layout
     return ft.Container(
         content=ft.Column(
             controls=[
                 ft.Text("🛠️ Crear Orden de Servicio", size=24, weight="bold", color="white"),
-                folio_text,
-                mecanico_dropdown,
-                cliente_nombre,
-                cliente_dni,
-                cliente_telefono,
-                vehiculo_marca,
-                vehiculo_modelo,
-                vehiculo_kilometraje,
-                vehiculo_placa,
-                vehiculo_color,
-                vehiculo_numero_serie,
-                ingreso_grua,
-                fecha_ingreso,
-                fecha_salida,
-                trabajos,
-                repuestos,
-                trabajos_terceros,
-                descuento_trabajos,
-                descuento_repuestos,
-                subtotal,
-                igv,
-                total,
-                pago_completado,
-                metodo_pago,
-                pago_adelantado,
-                pago_faltante_display,
+
+                # Sección: Datos Generales
+                ft.Container(
+                    content=ft.Column([
+                        ft.Text("📋 Datos Generales", size=18, weight="bold"),
+                        ft.Row([nuevo_mecanico, btn_agregar_mecanico]),
+
+                        ft.Row([folio_text, mecanico_dropdown]),
+                        ft.Row([fecha_ingreso, fecha_salida]),
+                    ]),
+                    border=ft.border.all(2, "#2196F3"),
+                    border_radius=8,
+                    padding=10
+                ),
+
+                # Sección: Datos del Cliente
+                ft.Container(
+                    content=ft.Column([
+                        ft.Text("👤 Datos del Cliente", size=18, weight="bold"),
+                        ft.Row([cliente_nombre, cliente_dni]),
+                        cliente_telefono,
+                    ]),
+                    border=ft.border.all(2, "#2196F3"),
+                    border_radius=8,
+                    padding=10
+                ),
+
+                # Sección: Datos del Vehículo
+                ft.Container(
+                    content=ft.Column([
+                        ft.Text("🏍️ Datos del Vehículo", size=18, weight="bold"),
+                        ft.Row([vehiculo_marca, vehiculo_modelo]),
+                        ft.Row([vehiculo_kilometraje, vehiculo_placa]),
+                        ft.Row([vehiculo_color, vehiculo_numero_serie]),
+                        ingreso_grua,
+                    ]),
+                    border=ft.border.all(2, "#2196F3"),
+                    border_radius=8,
+                    padding=10
+                ),
+
+                # Sección: Trabajos realizados
+                ft.Container(
+                    content=ft.Column([
+                        ft.ElevatedButton("Agregar Trabajo", on_click=agregar_trabajo),
+                        trabajos,  # Aquí va el contenido de los trabajos
+                    ]),
+                    border=ft.border.all(2, "#2196F3"),
+                    border_radius=8,
+                    padding=10
+                ),
+
+                # Sección: Repuestos utilizados
+                ft.Container(
+                    content=ft.Column([
+                        ft.ElevatedButton("Agregar Repuesto", on_click=agregar_repuesto),
+                        repuestos,  # Aquí va el contenido de los repuestos
+                    ]),
+                    border=ft.border.all(2, "#2196F3"),
+                    border_radius=8,
+                    padding=10
+                ),
+
+                # Sección: Trabajos de terceros
+                ft.Container(
+                    content=ft.Column([
+                        ft.ElevatedButton("Agregar Trabajo Tercero", on_click=agregar_trabajo_tercero),
+                        trabajos_terceros,  # Aquí va el contenido de los trabajos de terceros
+                    ]),
+                    border=ft.border.all(2, "#2196F3"),
+                    border_radius=8,
+                    padding=10
+                ),
+
+                # Totales
+                ft.Container(
+                    content=ft.Column([
+                        ft.Text("💵 Costos", size=18, weight="bold"),
+                        ft.Row([subtotal, igv, total]),
+                        ft.Row([pago_completado, metodo_pago]),
+                        ft.Row([pago_adelantado, pago_faltante_display]),
+                    ]),
+                    border=ft.border.all(2, "#2196F3"),
+                    border_radius=8,
+                    padding=10
+                ),
+
+                # Observaciones
                 observaciones,
-                ft.Row([
-                    ft.ElevatedButton("Agregar Trabajo", on_click=agregar_trabajo),
-                    ft.ElevatedButton("Agregar Repuesto", on_click=agregar_repuesto),
-                    ft.ElevatedButton("Agregar Trabajo Tercero", on_click=agregar_trabajo_tercero),
-                ], alignment="spaceAround"),
+
                 ft.Row([
                     ft.ElevatedButton("Guardar", on_click=guardar_en_db),
-                    ft.ElevatedButton("Reiniciar", on_click=reiniciar_formulario),
+                
                 ], alignment="spaceAround"),
             ],
             spacing=20,
@@ -313,6 +402,7 @@ def crear_orden_servicio(page: ft.Page):
         bgcolor="#121212",
         alignment=ft.alignment.top_center
     )
+
 
 
         
