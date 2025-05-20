@@ -4,12 +4,12 @@ import flet as ft
 import psycopg2
 import bcrypt
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..','..'))
 from secundario.inicio import inicio_inicio
-from db import conectar_db
+from scrip.db import conectar_db
 
 # Ruta absoluta al logo
-logo_path = os.path.abspath("iconos/logo.png")
+logo_path = os.path.abspath("../iconos/logo.png")
 
 # --------- UTILIDADES ---------
 def hash_password(password):
@@ -70,7 +70,7 @@ def main(page: ft.Page):
     page.window_width = 900
     page.window_height = 500
     page.bgcolor = "#1E1E1E"
-    logo_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'iconos', 'logo.png'))
+    logo_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..','..', 'iconos', 'logo.png'))
     logo = ft.Image(src=logo_path, width=180, height=180, visible=True)
 
     correos_disponibles = obtener_correos_usuarios()
@@ -236,4 +236,5 @@ def main(page: ft.Page):
     )
 
 # Lanzar app
-ft.app(target=main)
+ft.app(target=main, view=ft.WEB_BROWSER, port=8080)
+

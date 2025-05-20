@@ -6,6 +6,7 @@ import flet as ft
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'scrip'))
 from db import conectar_db
 
+
 # 🎨 Colores
 COLOR_TEXTO = "#BBDEFB"
 COLOR_FONDO_TARJETA = "#1E1E1E"

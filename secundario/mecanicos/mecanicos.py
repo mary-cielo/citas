@@ -15,11 +15,14 @@ def limpiar_descripciones(texto):
         return ""
     return re.sub(r'\s*\(.*?\)', '', texto).strip()
 
-COLOR_TEXTO = "#BBDEFB"
-COLOR_FONDO_TARJETA = "#1E1E1E"
-COLOR_BORDE_TARJETA = "#90CAF9"
-COLOR_BOTON = "#1976D2"
-COLOR_SOMBRA = "#BBDEFB"
+# =========================== COLORES ===========================
+COLOR_TEXTO = "#E3F2FD"
+COLOR_FONDO_TARJETA = "#263238"
+COLOR_BORDE_TARJETA = "#4FC3F7"
+COLOR_BOTON = "#0288D1"
+COLOR_SOMBRA = "#B3E5FC"
+COLOR_ERROR = "#FF5252"
+COLOR_SUCCESS = "#81C784"
 
 # =========================== DATOS ===========================
 def obtener_opciones_mecanico():
@@ -35,8 +38,7 @@ def obtener_datos_ordenes(mecanico, mes=None, fecha_inicio=None, fecha_fin=None)
     try:
         with conectar_db() as conn:
             query = "SELECT * FROM ordenes_servicio WHERE mecanico_nombre IS NOT NULL"
-            filters = []
-            params = []
+            filters, params = [], []
 
             if mecanico and mecanico != "Todos":
                 filters.append("mecanico_nombre = %s")
@@ -53,124 +55,131 @@ def obtener_datos_ordenes(mecanico, mes=None, fecha_inicio=None, fecha_fin=None)
             if filters:
                 query += " AND " + " AND ".join(filters)
 
-            df = pd.read_sql(query, conn, params=params)
-            return df
+            return pd.read_sql(query, conn, params=params)
     except Exception as e:
         print(f"Error al obtener datos: {e}")
         return pd.DataFrame()
 
 def calcular_totales(df):
-    total_repuestos = df['repuestos_total'].sum()
-    total_mano_obra = df['trabajo_total'].sum()
-    total_general = df['total'].sum()
-    return total_repuestos, total_mano_obra, total_general
+    return (
+        df['repuestos_total'].sum(),
+        df['trabajo_total'].sum(),
+        df['total'].sum()
+    )
 
 # =========================== UI PRINCIPAL ===========================
 def mostrar_mecanicos(page: ft.Page):
-    page.title = "Reporte de Órdenes de Servicio"
+    page.title = "🔍 Reporte de Órdenes de Servicio"
 
-    opciones_mecanico = obtener_opciones_mecanico()
-
+    # Elementos UI
     select_mecanico = ft.Dropdown(
-        label="Selecciona Mecánico",
-        options=[ft.dropdown.Option(m) for m in opciones_mecanico],
+        label="👨‍🔧 Selecciona Mecánico",
+        options=[ft.dropdown.Option(m) for m in obtener_opciones_mecanico()],
         width=300
     )
 
-    dropdown_mes = ft.TextField(label="🗓️ Mes (YYYY-MM)", hint_text="Ej: 2025-05", width=150)
+    dropdown_mes = ft.TextField(label="🗓️ Mes (YYYY-MM)", hint_text="Ej: 2025-05", width=160)
     input_desde = ft.TextField(label="📆 Desde (YYYY-MM-DD)", width=180)
     input_hasta = ft.TextField(label="📆 Hasta (YYYY-MM-DD)", width=180)
-    password_input = ft.TextField(label="Contraseña para ver totales", password=True, can_reveal_password=True, width=300)
+    password_input = ft.TextField(label="🔐 Contraseña para ver totales", password=True, can_reveal_password=True, width=300)
 
     result_container = ft.Column(spacing=10)
     total_container = ft.Column(spacing=10)
 
     def filtrar_ordenes(e=None):
+        # Validaciones
+        errores = []
         mecanico = select_mecanico.value
         mes = None
-        errores = []
 
+        # Validar mes
         if dropdown_mes.value:
             try:
                 mes_fecha = datetime.strptime(dropdown_mes.value, "%Y-%m")
                 mes = mes_fecha.month
-            except:
-                errores.append("❌ Formato de mes inválido (use YYYY-MM)")
+            except ValueError:
+                errores.append("❌ Mes inválido. Formato correcto: YYYY-MM.")
 
-        inicio = input_desde.value.strip()
-        fin = input_hasta.value.strip()
-
-        if inicio and fin:
-            try:
+        # Validar fechas
+        inicio, fin = input_desde.value.strip(), input_hasta.value.strip()
+        try:
+            if inicio and fin:
                 datetime.strptime(inicio, "%Y-%m-%d")
                 datetime.strptime(fin, "%Y-%m-%d")
-            except:
-                errores.append("❌ Fechas inválidas (use YYYY-MM-DD)")
+        except ValueError:
+            errores.append("❌ Fechas inválidas. Use el formato: YYYY-MM-DD.")
 
+        # Limpiar contenedores
         result_container.controls.clear()
         total_container.controls.clear()
 
         if errores:
             for error in errores:
-                result_container.controls.append(ft.Text(error, color="red"))
+                result_container.controls.append(ft.Text(error, color=COLOR_ERROR, weight="bold"))
             page.update()
             return
 
+        # Obtener datos
         df = obtener_datos_ordenes(mecanico, mes, inicio or None, fin or None)
 
-        if not df.empty:
-            for _, servicio in df.iterrows():
-                trabajo_limpio = limpiar_descripciones(servicio['trabajo_descripcion'])
-                repuestos_limpio = limpiar_descripciones(servicio['repuestos_descripcion'])
-
+        if df.empty:
+            result_container.controls.append(ft.Text("📭 No se encontraron resultados.", color=COLOR_ERROR))
+        else:
+            for _, s in df.iterrows():
                 tarjeta = ft.Container(
                     content=ft.Column([
-                        ft.Text(f"🔧 Mecánico: {servicio['mecanico_nombre']}", color=COLOR_TEXTO, weight="bold"),
-                        ft.Text(f"👤 Cliente: {servicio['cliente_nombre']} - 📞 {servicio['cliente_telefono']}", color=COLOR_TEXTO),
-                        ft.Text(f"🚗 Vehículo: {servicio['vehiculo_marca']} {servicio['vehiculo_modelo']} - 🎨 {servicio['vehiculo_color']} - 🔢 Placa: {servicio['vehiculo_placa']}", color=COLOR_TEXTO),
-                        ft.Text(f"📅 Ingreso: {servicio['fecha_ingreso']} - 📤 Salida: {servicio['fecha_salida']}", color=COLOR_TEXTO),
-                        ft.Text(f"🛠️ Trabajo: {trabajo_limpio}", color=COLOR_TEXTO),
-                        ft.Text(f"🧾 Repuestos: {repuestos_limpio}", color=COLOR_TEXTO),
-                        ft.Text(f"💳 Pago: {'✅ Completado' if servicio['pago_completado'] else '❌ Pendiente'} - Método: {servicio['metodo_pago']}", color=COLOR_TEXTO),
-                        ft.Text(f"📝 Observaciones: {servicio['observaciones']}", color=COLOR_TEXTO),
+                        ft.Text(f"🔧 Mecánico: {s['mecanico_nombre']}", color=COLOR_TEXTO, weight="bold"),
+                        ft.Text(f"👤 Cliente: {s['cliente_nombre']} - 📞 {s['cliente_telefono']}", color=COLOR_TEXTO),
+                        ft.Text(f"🚗 {s['vehiculo_marca']} {s['vehiculo_modelo']} - 🎨 {s['vehiculo_color']} - 🔢 {s['vehiculo_placa']}", color=COLOR_TEXTO),
+                        ft.Text(f"📅 Ingreso: {s['fecha_ingreso']} - 📤 Salida: {s['fecha_salida']}", color=COLOR_TEXTO),
+                        ft.Text(f"🛠️ Trabajo: {limpiar_descripciones(s['trabajo_descripcion'])}", color=COLOR_TEXTO),
+                        ft.Text(f"🧾 Repuestos: {limpiar_descripciones(s['repuestos_descripcion'])}", color=COLOR_TEXTO),
+                        ft.Text(f"💳 Pago: {'✅ Completado' if s['pago_completado'] else '❌ Pendiente'} - Método: {s['metodo_pago']}", color=COLOR_TEXTO),
+                        ft.Text(f"📝 Observaciones: {s['observaciones']}", color=COLOR_TEXTO),
                     ]),
                     padding=10,
                     bgcolor=COLOR_FONDO_TARJETA,
                     border_radius=10,
-                    width=1300,
                     border=ft.border.all(1, COLOR_BORDE_TARJETA),
+                    width=1300,
                     margin=8
                 )
                 result_container.controls.append(tarjeta)
-        else:
-            result_container.controls.append(ft.Text("📭 No se encontraron resultados"))
 
+        # Mostrar totales si la contraseña es correcta
         if password_input.value == "12345":
-            total_repuestos, total_mano_obra, total_general = calcular_totales(df)
-            total_container.controls.append(ft.Text(f"🧾 Total Repuestos: {total_repuestos}", color="green"))
-            total_container.controls.append(ft.Text(f"🛠️ Mano de Obra: {total_mano_obra}", color="orange"))
-            total_container.controls.append(ft.Text(f"💰 Total General: {total_general}", weight="bold"))
+            repuestos, mano_obra, total = calcular_totales(df)
+            total_container.controls.extend([
+                ft.Text(f"🧾 Total Repuestos: {repuestos}", color=COLOR_SUCCESS),
+                ft.Text(f"🛠️ Mano de Obra: {mano_obra}", color="#FFB74D"),
+                ft.Text(f"💰 Total General: {total}", weight="bold", color="#FFF176"),
+            ])
         else:
-            total_container.controls.append(ft.Text("🔒 Ingresa contraseña para ver totales."))
+            total_container.controls.append(ft.Text("🔒 Ingresa contraseña para ver los totales.", color="gray"))
 
         page.update()
 
-    btn_filtrar = ft.ElevatedButton("Filtrar", on_click=filtrar_ordenes)
+    # Botón
+    btn_filtrar = ft.ElevatedButton(
+        text="🔎 Filtrar",
+        on_click=filtrar_ordenes,
+        style=ft.ButtonStyle(bgcolor=COLOR_BOTON, color="white")
+    )
 
-    # SCROLL ACTIVO
+    # Layout principal
     return ft.Container(
         expand=True,
         padding=20,
         content=ft.Column(
             controls=[
-                ft.Text("📋 Reporte por Mecánico", size=24, weight="bold"),
+                ft.Text("📋 Reporte por Mecánico", size=28, weight="bold", color=COLOR_BOTON),
                 ft.Row([select_mecanico, dropdown_mes], spacing=20),
                 ft.Row([input_desde, input_hasta], spacing=20),
                 password_input,
                 btn_filtrar,
-                ft.Divider(),
+                ft.Divider(height=2, thickness=1),
                 total_container,
-                result_container
+                result_container,
             ],
             scroll=ft.ScrollMode.AUTO,
             expand=True,

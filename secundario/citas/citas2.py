@@ -127,11 +127,8 @@ def mostrar_formulario_nueva_cita(page: ft.Page):
         finally:
             page.update()
 
-            # Limpiar las vistas y redirigir a la vista de citas de forma clara
-            page.views.clear()  # Limpiar cualquier vista previa
-            from citas.citas import mostrar_citas  # Importar la función que muestra las citas
-            mostrar_citas(page)  # Llamar la función que mostrará las citas en la página principal
-            page.update()
+            page.go("/")
+
 
     formulario = ft.Column([        
         ft.Row([fecha_picker, ft.IconButton(icon=ft.icons.CALENDAR_MONTH_OUTLINED, on_click=abrir_fecha)]),  
@@ -152,7 +149,8 @@ def mostrar_formulario_nueva_cita(page: ft.Page):
     app_bar_buttons = [
         ft.IconButton(
             icon=ft.icons.ARROW_BACK,
-            on_click=lambda e: page.go("/citas"), 
+            on_click=lambda e: page.go("/"),
+
             icon_color=TEXT_COLOR
         )
     ]

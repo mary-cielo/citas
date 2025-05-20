@@ -28,7 +28,7 @@ def crear_orden_servicio(page: ft.Page):
         try:
             with conectar_db() as conn:
                 with conn.cursor() as cursor:
-                    cursor.execute("SELECT folio FROM ordenservicio ORDER BY id DESC LIMIT 1;")
+                    cursor.execute("SELECT folio FROM ordenes_servicio ORDER BY id DESC LIMIT 1;")
                     ultimo_folio = cursor.fetchone()
 
             if ultimo_folio is not None and len(ultimo_folio) > 0:
@@ -158,7 +158,7 @@ def crear_orden_servicio(page: ft.Page):
                  ft.dropdown.Option("BBVA"),
                  ft.dropdown.Option("BCP"),
                  ft.dropdown.Option("Interbank")],
-        value="Efectivo",  # Valor predeterminado
+        value="Efectivo", 
         width=200
     )
 
@@ -172,12 +172,12 @@ def crear_orden_servicio(page: ft.Page):
         page.update()
 
     def calcular_faltante():
-        total_amount = extraer_numero(total.value.strip())  # Obtener el total
-        adelanto = float(pago_adelantado.value or 0)  # Obtener el monto adelantado
+        total_amount = extraer_numero(total.value.strip())  
+        adelanto = float(pago_adelantado.value or 0) 
         if adelanto > total_amount:
             page.add(ft.Text("❌ El pago adelantado no puede ser mayor que el total.", color=ft.Colors.RED))
             return
-        faltante = max(0, total_amount - adelanto)  # Calcular faltante
+        faltante = max(0, total_amount - adelanto)
 
         pago_faltante_display.value = f"Falta por pagar: S/. {faltante:.2f}"
         page.update()
@@ -249,7 +249,7 @@ def crear_orden_servicio(page: ft.Page):
                 with conn.cursor() as cursor:
                     cursor.execute(
                         """
-                        INSERT INTO ordenservicio 
+                        INSERT INTO ordenes_servicio
                         (folio, mecanico_nombre, cliente_nombre, cliente_dni, cliente_telefono, 
                         vehiculo_marca, vehiculo_modelo, vehiculo_kilometraje, vehiculo_placa,
                         vehiculo_color, vehiculo_numero_serie, ingreso_grua, 

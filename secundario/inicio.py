@@ -84,7 +84,7 @@ def inicio_inicio(page):
         return ft.AppBar(
             bgcolor=APP_BAR_COLOR,
             leading=ft.IconButton(icon=ft.Icons.ACCOUNT_CIRCLE, icon_size=35, icon_color=TEXT_COLOR, on_click=lambda e: page.go("/usuario")),
-            title=ft.Text("TABLERO", size=26, weight=ft.FontWeight.BOLD, color=TEXT_COLOR),
+            title=ft.Text("RUDOLF MOTOS", size=26, weight=ft.FontWeight.BOLD, color=TEXT_COLOR),
             center_title=True,
             actions=[build_menu_button(page)],
         )
@@ -114,7 +114,7 @@ def inicio_inicio(page):
             icon_color=TEXT_COLOR,
             items=[
                 ft.PopupMenuItem(text="Eventos", on_click=lambda e: page.go("/citas/eventos")),
-                ft.PopupMenuItem(text="Mecánicos", on_click=lambda e: page.go("/mecanicos/mecanicos")),  # Ruta de mecánicos en el menú
+                ft.PopupMenuItem(text="Mecánicos", on_click=lambda e: page.go("/mecanicos/mecanicos")),  
             ],
         )
 
