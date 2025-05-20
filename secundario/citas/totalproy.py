@@ -15,6 +15,9 @@ from db import conectar_db
 # === Funciones auxiliares ===
 
 def obtener_datos(agrupacion="mes", mes=None, mecanico=None):
+    """
+    Obtiene los datos de ingresos agrupados según el parámetro `agrupacion`.
+    """
     try:
         with conectar_db() as conn:
             campo_fecha, formato = {
@@ -41,10 +44,13 @@ def obtener_datos(agrupacion="mes", mes=None, mecanico=None):
 
             return pd.read_sql(query, conn)
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"❌ Error al obtener los datos: {e}")
         return pd.DataFrame(columns=["periodo", "total"])
 
 def crear_grafico(df, incluir_prediccion=False, agrupacion="mes"):
+    """
+    Crea un gráfico de barras de los ingresos agrupados, con opción de añadir proyección.
+    """
     if df.empty:
         return None, "⚠️ No hay datos para mostrar."
 
@@ -76,6 +82,9 @@ def crear_grafico(df, incluir_prediccion=False, agrupacion="mes"):
     return img_base64, None
 
 def obtener_opciones_mes():
+    """
+    Obtiene la lista de meses disponibles para agrupar los ingresos.
+    """
     try:
         with conectar_db() as conn:
             df = pd.read_sql("""
@@ -84,15 +93,24 @@ def obtener_opciones_mes():
                 ORDER BY mes
             """, conn)
             return ["Todos"] + df['mes'].dropna().tolist()
-    except:
+    except Exception as e:
+        print(f"❌ Error al obtener los meses: {e}")
         return ["Todos"]
 
 def obtener_opciones_mecanico():
+    """
+    Obtiene la lista de mecánicos disponibles para filtrar los ingresos.
+    """
     try:
         with conectar_db() as conn:
-            df = pd.read_sql("SELECT DISTINCT mecanico_nombre FROM ordenes_servicio WHERE mecanico_nombre IS NOT NULL", conn)
+            df = pd.read_sql("""
+                SELECT DISTINCT mecanico_nombre
+                FROM ordenes_servicio
+                WHERE mecanico_nombre IS NOT NULL
+            """, conn)
             return ["Todos"] + df['mecanico_nombre'].dropna().tolist()
-    except:
+    except Exception as e:
+        print(f"❌ Error al obtener los mecánicos: {e}")
         return ["Todos"]
 
 # === Vista Principal para proyecciones de ingresos ===
@@ -104,9 +122,10 @@ def vista_proyecciones_ingresos(page: ft.Page) -> ft.Container:
     img = ft.Image(width=800, height=400)
     resultado = ft.Text(color="white", size=14)
 
+    # Dropdowns y switch para los filtros
     agrupacion_dropdown = ft.Dropdown(
         label="Agrupar por",
-        value="dia",
+        value="mes",
         options=[ft.dropdown.Option(a) for a in ["dia", "semana", "mes", "anio"]]
     )
     mes_dropdown = ft.Dropdown(label="Mes", value="Todos", options=[ft.dropdown.Option(m) for m in obtener_opciones_mes()])
@@ -114,10 +133,16 @@ def vista_proyecciones_ingresos(page: ft.Page) -> ft.Container:
     sw_prediccion = ft.Switch(label="Incluir Proyección", value=False)
 
     def actualizar_visibilidad_mes():
+        """
+        Actualiza la visibilidad del dropdown del mes dependiendo de la agrupación seleccionada.
+        """
         mes_dropdown.visible = agrupacion_dropdown.value == "dia"
         page.update()
 
     def actualizar_grafico(_=None):
+        """
+        Actualiza el gráfico según los filtros seleccionados.
+        """
         agrupacion = agrupacion_dropdown.value
         mes = mes_dropdown.value if agrupacion == "dia" else None
         mecanico = mecanico_dropdown.value
@@ -135,6 +160,9 @@ def vista_proyecciones_ingresos(page: ft.Page) -> ft.Container:
         page.update()
 
     def exportar_csv(e):
+        """
+        Exporta los datos de ingresos a un archivo CSV.
+        """
         agrupacion = agrupacion_dropdown.value
         mes = mes_dropdown.value if agrupacion == "dia" else None
         mecanico = mecanico_dropdown.value
@@ -145,6 +173,7 @@ def vista_proyecciones_ingresos(page: ft.Page) -> ft.Container:
         df.to_csv("export_ingresos.csv", index=False)
         resultado.value = "✅ Datos exportados a export_ingresos.csv"
 
+    # Asignar eventos
     agrupacion_dropdown.on_change = lambda e: (actualizar_visibilidad_mes(), actualizar_grafico())
     mes_dropdown.on_change = actualizar_grafico
     mecanico_dropdown.on_change = actualizar_grafico
@@ -167,5 +196,3 @@ def vista_proyecciones_ingresos(page: ft.Page) -> ft.Container:
             ]
         )
     )
-
-    page.update()
